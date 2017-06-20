@@ -4,58 +4,121 @@ import ReactQuill from 'react-quill';
 import { Router, Route } from 'react-router';
 import RaisedButton from 'material-ui/RaisedButton';
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider';
-import { Button, Col, Row, Media, Jumbotron } from 'react-bootstrap';
+import { Button, Col, Row, Media, Jumbotron, Image } from 'react-bootstrap';
 import { deepPurple900, deepPurple300, yellowA700, grey500, green800, redA700 } from 'material-ui/styles/colors';
 
 
 
 var Index = React.createClass({
   getInitialState() {
-    var apt = $('.question-like').text();
-    if (apt === 'true') {
-      apt = true
-    } else {
-      apt = false
-    };
-    var data = $('.question-content').text();
+    var userid = $('.question-user').text();
+    var questionid = $('.question-id').text();
     return {
       editorHtml: '',
-      like: false,
+      like: [],
       collection: false,
-      adopt: apt,
-      data: data,
+      adopt: [],
+      title: '',
+      content: '',
+      type: [],
+      userid: userid,
+      questionid: questionid,
+      answer: [],
+      btn: false,
+      author: '',
+      headPortrait: '',
+      pageviews: '',
+      adt: false,
+      answerlist: [],
     }
+  },
+  componentDidMount: function() {
+    var a = this;
+    var btn = $('.question-user').text();
+    var atr = $('.question-user').text();
+    if (btn === '') {
+      btn = true
+    } else {
+      btn = false
+    };
+    $.ajax({
+      type: 'get',
+      url: '/api/question/'+this.state.questionid,
+      dataType: 'json',
+      success: function(json) {
+        var adoptArray = [];
+        var likeArray = [];
+        var answerid = [];
+        var length = json.answer.length
+        for (var i = 0; i < length; i++) {
+          adoptArray.push(false)
+        }
+        for (var j = 0; j < length; j++) {
+          likeArray.push(false)
+        }
+        for (var k = 0; k < length; k++) {
+          answerid.push(json.answer[k].author)
+        }
+        console.log(answerid);
+        if (json.question.author._id === atr) {
+          atr = false
+        } else {
+          atr = true
+        };
+        a.setState({
+          title: json.question.title,
+          content: json.question.content,
+          type: json.question.type,
+          answer: json.answer,
+          btn: btn,
+          adopt: adoptArray,
+          like: likeArray,
+          author: json.question.author.nickName,
+          headPortrait: json.question.author.headPortrait,
+          pageviews: json.question.pageviews,
+          adt: atr,
+          answerlist: answerid,
+        })
+      }
+    })
   },
   changeQuill(html) {
       this.setState( Object.assign( {}, this.state, {editorHtml:html} ) );
       // this.setState({editorHtml: html});
   },
   submit() {
+
     var user = $('.question-user').text();
     var id = $('.question-id').text();
+    var thissub = this;
     $.ajax({
       type: 'post',
-      url: '/question/comment',
-      data: {Content: this.state.editorHtml, author: '5928dda0d3e92d69081124e3', answerTime: new Date(), question: '5928e40767cfd96c99735fd1'},
+      url: '/api/question/comment',
+      data: {Content: this.state.editorHtml, author: this.state.userid, answerTime: new Date(), question: this.state.questionid},
       dataType: 'json',
-      success: function(data,status) {
-        // console.log(data);
+      success: function(data) {
+        thissub.setState({
+          answer: data.answer,
+          editorHtml: ''
+        })
       }
     })
   },
 
-  likebtn() {
+  likebtn(i) {
     var userid = $('.question-user').text();
     var questionid = $('.question-id').text();
     $.ajax({
       type: 'post',
-      url: 'question/like',
-      data: {userid: '5928dda0d3e92d69081124e3', questionid: '5928e40767cfd96c99735fd1'},
+      url: '/api/question/like/'+questionid+'/'+userid,
+      data: {userid: this.state.userid, questionid: this.state.questionid},
       dataType: 'json',
       success: function(data,status) {
       }
     })
-    this.setState({like: !this.state.like})
+    var likes = this.state.like;
+    likes[i] = !likes[i];
+    this.setState({like: likes})
   },
 
   collection() {
@@ -63,8 +126,8 @@ var Index = React.createClass({
     var questionid = $('.question-id').text();
     $.ajax({
       type: 'post',
-      url: 'question/collection',
-      data: {userid: '5928dda0d3e92d69081124e3', questionid: '5928e40767cfd96c99735fd1'},
+      url: '/api/question/collection/'+questionid+'/'+userid,
+      data: {userid: this.state.userid, questionid: this.state.questionid},
       dataType: 'json',
       success: function(data,status) {
       }
@@ -72,66 +135,98 @@ var Index = React.createClass({
     this.setState({collection: !this.state.collection})
   },
 
-  adopt() {
+  adopt(i) {
     var userid = $('.question-user').text();
     var questionid = $('.question-id').text();
     $.ajax({
       type: 'post',
-      url: 'question/adopt',
-      data: {userid: '5928dda0d3e92d69081124e3', questionid: '5928e40767cfd96c99735fd1', state:this.state.adopt},
+      url: '/api/question/adopt/'+questionid+'/'+userid,
+      data: {userid: this.state.userid, questionid: this.state.questionid, state:this.state.adopt[i], user: this.state.answerlist[i]._id},
       dataType: 'json',
       success: function(data,status) {
       }
     })
-    this.setState({adopt: !this.state.adopt})
+    var d = this.state.adopt;
+    d[i] = !d[i]
+    console.log(this.state.adopt);
+    this.setState({adopt: d,
+                   adt: true,
+                  })
+  },
+
+  adoptstate(i) {
+    var e = this.state.adopt;
+    return e[i] ? '已采' : '采纳'
+  },
+
+  likestate(i) {
+    var f = this.state.like;
+    return f[i] ? '已赞' : '点赞'
   },
 
   render(){
-    var text = this.state.like ? '取消' : '点赞';
+
     var text1 = this.state.collection ? '已收藏' : '收藏';
-    var text2 = this.state.adopt ? '已采纳' : '采纳';
+
     return (
+      <div className="question-body">
       <div className='question-main'>
-
-        <Jumbotron className='question-title'>
-          <h2>{this.state.data}</h2>
-          <p>问题内容.水电费水电费收费是否说法个人个人供热哈哈和给对方会如何如何如何收到货今天以具体要看具体客户私人将同意就后天人格和人个人个人</p>
-          <p>关键字：node,react</p>
-          <Media>
-           <Media className='question-img'>
-              <img width={30} height={30} src="./images/head.jpg" alt="Image"/>
-              <span>用户名</span>
-              <span>浏览量：10 </span><span> 倒计时：60</span>
-
-            </Media>
-          </Media>
-          <p className='question-btn' backgroundColor={deepPurple300}><Button bsStyle="primary" onClick={this.collection}>{text1}</Button></p>
-          <p className='question-btn' backgroundColor={deepPurple300}><Button bsStyle="success" onClick={this.likebtn}>{text}</Button></p>
+        <div className="question-right">
+          <p className='question-btn' ><Button bsStyle="primary" disabled={this.state.btn} onClick={this.collection}>{text1}</Button></p>
+          <div className="question-left-width">
+          <h2><i className="fa fa-handshake-o" aria-hidden="true"></i>&nbsp;&nbsp;{this.state.title}</h2>
+          <h4 className="question-content" dangerouslySetInnerHTML={{__html:this.state.content}}></h4>
+          <p className="question-content">关键字：{this.state.type.map(function(data) {
+            return(
+              <span className="question-type">{data}</span>
+            )
+          })}</p>
+          <div className="question-btn2">
+          <Image className="question-image question-content" src={this.state.headPortrait} circle />
+          <span className="question-author">{this.state.author}</span>
+          </div>
+          <span className="question-author question-btn1">被浏览{this.state.pageviews}次</span>
+          </div>
+          </div>
           <Row className="show-grid">
-            <Col lg={12} md={12} sm={12} xs={12} className='question-answer'>
-              <div>
-
-                <div className='question-img'>
-                <img width={30} height={30} src="./images/head.jpg" alt="Image"/>
-                <span>用户名: </span>
-                <span>评论内容.</span>
+            {this.state.answer.map(function(data,i) {
+              return (
+                <div key={i}>
+                  <Col lg={12} md={12} sm={12} xs={12} className='question-answer'>
+                    <div className='question-img'>
+                    <div>
+                      <div className="question-preson">
+                      <Image className="question-image" src={data.author.headPortrait} circle />
+                      <span className="question-font">{data.author.nickName}</span>
+                      </div>
+                    </div>
+                      <div className="question-font1" dangerouslySetInnerHTML={{__html:data.Content}}></div>
+                      <Col lg={12} md={12} sm={12} xs={12} className="question-btn1">
+                      <Button className="question-btn1" bsStyle="primary" disabled={this.state.adt} onClick={this.adopt.bind(this,i)}>{this.adoptstate.bind(this,i)()}</Button>
+                      <Button className="question-btn1" bsStyle="success" disabled={this.state.btn} onClick={this.likebtn.bind(this,i)}>{this.likestate.bind(this,i)()}</Button>
+                      </Col>
+                    </div>
+                  </Col>
                 </div>
-                <p className='question-btn' backgroundColor={deepPurple300}><Button bsStyle="danger" onClick={this.adopt}>{text2}</Button></p>
-              </div>
-            </Col>
+              )
+            }.bind(this)
+          )}
+          </Row>
+          <Row className="show-grid question-input">
             <Col lg={12} md={12} sm={12} xs={12} >
             <ReactQuill theme="snow"
             onChange={(html) => { this.changeQuill(html) }}
             placeholder={'please input'}
+            value={this.state.editorHtml}
             />
-            <p className="question-btn"><Button bsStyle="primary" onClick={this.submit}>提交</Button></p>
+
+            <p className="question-btn"><Button bsStyle="primary" disabled={this.state.btn} onClick={this.submit}>提交</Button></p>
             </Col>
           </Row>
+      </div>
+      <div className="question-question">
 
-
-        </Jumbotron>
-
-
+      </div>
       </div>
     );
   }

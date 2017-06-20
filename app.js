@@ -20,7 +20,10 @@ var publish = require('./routes/publish');
 var resetPasswd = require('./routes/resetPasswd');
 var question = require('./routes/question');
 var userinfo = require('./routes/userinfo');
-
+var search = require('./routes/search');
+var sassMiddleware = require('node-sass-middleware');
+var api = require('./routes/api');
+var compression = require('compression');
 var app = express();
 app.use(session({
   resave: true,
@@ -37,7 +40,7 @@ app.use(WebpackDevMiddleware(compiler, {
   stats: { colors: true }
 }));
 app.use(WebpackHotMiddleware(compiler));
-
+app.use(compression());
 
 // view engine setup
 // app.set('views', path.join(__dirname, '/components'));
@@ -53,13 +56,23 @@ app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
+app.use(
+    sassMiddleware({
+        src: __dirname + '/public/sass', //where the sass files are
+        dest: __dirname + '/public', //where css should go
+        debug: true // obvious
+    })
+ );
 
-app.use('/', index);
+
+app.use('/',index);
 app.use('/users', users);
 app.use('/publish', publish);
 app.use('/resetPasswd',resetPasswd);
 app.use('/question',question);
 app.use('/userinfo',userinfo);
+app.use('/search',search);
+app.use('/api',api);
 
 
 // catch 404 and forward to error handler
